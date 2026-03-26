@@ -625,8 +625,10 @@
         });
     }
 
+    let kioskEnding = false;
+
     async function kioskJoin(url) {
-      if (kioskCallActive) return;
+      if (kioskCallActive || kioskEnding) return;
       kioskCallActive = true;
       statusEl.classList.add('active');
       kioskIdleEl.classList.add('hidden');
@@ -650,12 +652,18 @@
     }
 
     async function kioskEnd() {
-      if (!kioskCallActive) return;
+      if (!kioskCallActive || kioskEnding) return;
+      kioskEnding = true;
       kioskCallActive = false;
-      if (callObject) { callObject.destroy(); callObject = null; }
+      if (callObject) {
+        const co = callObject;
+        callObject = null;
+        try { await co.destroy(); } catch (e) { console.warn('Daily destroy error:', e); }
+      }
       kioskFrameEl.innerHTML = '';
       kioskVideoEl.classList.remove('active');
       statusEl.classList.remove('active', 'incoming');
+      kioskEnding = false;
       setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
     }
   </script>
