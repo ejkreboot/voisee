@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Family Video Call</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@daily-co/daily-js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --cream: #f5f0e8;
+      --warm-white: #faf8f4;
+      --stone: #c8bfb0;
+      --slate: #7a7268;
+      --charcoal: #2a2520;
+      --ink: #1a1714;
+      --accent: #8b6f47;
+      --accent-light: #c4a882;
+      --green: #4a7c59;
+      --red: #8b3a3a;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ════════════════════════════════
+       CALLER MODE
+    ════════════════════════════════ */
+    #caller-mode {
+      position: absolute;
+      inset: 0;
+      background: var(--warm-white);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      transition: opacity 0.6s ease;
+    }
+
+    #caller-mode.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .caller-inner {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .greeting {
+      font-family: 'DM Serif Display', serif;
+      font-size: 42px;
+      color: var(--charcoal);
+      text-align: center;
+      line-height: 1.15;
+      margin-bottom: 10px;
+    }
+
+    .greeting em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .subtext {
+      font-size: 15px;
+      color: var(--slate);
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 52px;
+      letter-spacing: 0.02em;
+    }
+
+    .avatar-stack {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 52px;
+    }
+
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid var(--warm-white);
+      background: var(--cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--accent);
+      margin-left: -16px;
+    }
+
+    .avatar:first-child { margin-left: 0; }
+
+    .avatar.you {
+      background: var(--charcoal);
+      color: var(--cream);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    .call-btn {
+      width: 100%;
+      padding: 20px 32px;
+      background: var(--charcoal);
+      color: var(--cream);
+      border: none;
+      border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: background 0.2s, transform 0.15s;
+      margin-bottom: 16px;
+    }
+
+    .call-btn:hover { background: var(--accent); transform: translateY(-1px); }
+    .call-btn:active { transform: translateY(0); }
+
+    .call-btn .btn-icon {
+      width: 22px;
+      height: 22px;
+      background: var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .call-btn .btn-icon svg { width: 11px; height: 11px; fill: white; }
+
+    .kiosk-btn {
+      background: none;
+      border: 1.5px solid var(--stone);
+      border-radius: 10px;
+      padding: 13px 24px;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--slate);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      letter-spacing: 0.03em;
+    }
+
+    .kiosk-btn:hover { border-color: var(--accent-light); color: var(--accent); }
+
+    .divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 4px 0 16px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--stone);
+      opacity: 0.4;
+    }
+
+    .divider span {
+      font-size: 11px;
+      color: var(--stone);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ════════════════════════════════
+       CALLER IN-CALL
+    ════════════════════════════════ */
+    #caller-call {
+      position: absolute;
+      inset: 0;
+      background: var(--ink);
+      display: none;
+      flex-direction: column;
+    }
+
+    #caller-call.active { display: flex; }
+
+    #caller-video-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #caller-frame-target {
+      position: absolute;
+      inset: 0;
+    }
+
+    #caller-frame-target iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #waiting-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      transition: opacity 0.6s ease;
+      z-index: 10;
+    }
+
+    #waiting-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .waiting-label {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      color: var(--cream);
+      text-align: center;
+    }
+
+    .waiting-sub {
+      font-size: 14px;
+      color: var(--slate);
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+
+    .pulse-ring-wrap {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent-light);
+      animation: pulse-out 2.4s ease-out infinite;
+      opacity: 0;
+    }
+
+    .pulse-ring:nth-child(1) { width: 60px;  height: 60px;  animation-delay: 0s; }
+    .pulse-ring:nth-child(2) { width: 80px;  height: 80px;  animation-delay: 0.6s; }
+    .pulse-ring:nth-child(3) { width: 100px; height: 100px; animation-delay: 1.2s; }
+
+    @keyframes pulse-out {
+      0%   { transform: scale(0.7); opacity: 0.7; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    .pulse-center {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+
+    .pulse-center svg { width: 20px; height: 20px; fill: white; }
+
+    #caller-controls {
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--ink);
+      border-top: 1px solid #2a2520;
+    }
+
+    .ctrl-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .ctrl-btn:hover { opacity: 0.8; transform: scale(1.05); }
+    .ctrl-btn:active { transform: scale(0.95); }
+    .ctrl-btn svg { width: 20px; height: 20px; fill: white; }
+    .ctrl-btn.mute { background: #333028; }
+    .ctrl-btn.hang { background: var(--red); width: 64px; height: 64px; }
+    .ctrl-btn.cam  { background: #333028; }
+    .ctrl-btn.off  { background: #5a1a1a; }
+
+    /* ════════════════════════════════
+       KIOSK MODE
+    ════════════════════════════════ */
+    #kiosk-mode {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #kiosk-mode.active { display: flex; }
+
+    #kiosk-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: opacity 0.8s ease;
+    }
+
+    #kiosk-idle.hidden { opacity: 0; pointer-events: none; }
+
+    #kiosk-clock {
+      font-size: 88px;
+      font-weight: 200;
+      letter-spacing: -3px;
+      color: #2a2a2a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #kiosk-date {
+      font-size: 13px;
+      font-weight: 300;
+      color: #1e1e1e;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    #kiosk-video-wrap {
+      position: absolute;
+      inset: 0;
+      display: none;
+    }
+
+    #kiosk-video-wrap.active { display: block; }
+
+    #kiosk-frame-target {
+      position: absolute;
+      inset: 0;
+    }
+
+    #kiosk-frame-target iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #kiosk-status {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #111;
+      transition: background 0.5s;
+      z-index: 100;
+    }
+
+    #kiosk-status.polling  { background: #1a2a1a; }
+    #kiosk-status.incoming { background: #2a3a1a; }
+    #kiosk-status.active   { background: #1a4a1a; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ CALLER MODE ══ -->
+  <div id="caller-mode">
+    <div class="caller-inner">
+      <h1 class="greeting">Call <em>Mom</em></h1>
+      <p class="subtext">She'll see you as soon as you connect</p>
+
+      <div class="avatar-stack">
+        <div class="avatar">M</div>
+        <div class="avatar">E</div>
+        <div class="avatar">S</div>
+        <div class="avatar you">You</div>
+      </div>
+
+      <button class="call-btn" id="start-call-btn">
+        <span class="btn-icon">
+          <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+        </span>
+        Start Video Call
+      </button>
+
+      <div class="divider"><span>or</span></div>
+
+      <button class="kiosk-btn" id="enter-kiosk-btn">Enter Kiosk Mode</button>
+    </div>
+  </div>
+
+  <!-- ══ CALLER IN-CALL ══ -->
+  <div id="caller-call">
+    <div id="caller-video-wrap">
+      <div id="waiting-overlay">
+        <div class="pulse-ring-wrap">
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring"></div>
+          <div class="pulse-center">
+            <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+          </div>
+        </div>
+        <div class="waiting-label">Connecting to Mom…</div>
+        <div class="waiting-sub">Her tablet will answer automatically</div>
+      </div>
+      <div id="caller-frame-target"></div>
+    </div>
+
+    <div id="caller-controls">
+      <button class="ctrl-btn mute" id="mute-btn" title="Mute">
+        <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm-1 16.93A7.001 7.001 0 0 1 5 11H3a9 9 0 0 0 8 8.94V22h2v-2.06A9 9 0 0 0 21 11h-2a7 7 0 0 1-6 6.93V17.93z"/></svg>
+      </button>
+      <button class="ctrl-btn hang" id="hang-btn" title="End call">
+        <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.77 7.46 7 12 7s8.66 1.77 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+      </button>
+      <button class="ctrl-btn cam" id="cam-btn" title="Toggle camera">
+        <svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ KIOSK MODE ══ -->
+  <div id="kiosk-mode">
+    <div id="kiosk-idle">
+      <div id="kiosk-clock">00:00</div>
+      <div id="kiosk-date"></div>
+    </div>
+    <div id="kiosk-video-wrap">
+      <div id="kiosk-frame-target"></div>
+    </div>
+  </div>
+
+  <div id="kiosk-status"></div>
+
+  <script>
+    let callObject = null;
+    let kioskMode = false;
+    let kioskCallActive = false;
+    let callerCallActive = false;
+    let muted = false;
+    let camOff = false;
+
+    const callerModeEl  = document.getElementById('caller-mode');
+    const callerCallEl  = document.getElementById('caller-call');
+    const callerFrameEl = document.getElementById('caller-frame-target');
+    const waitingEl     = document.getElementById('waiting-overlay');
+    const kioskModeEl   = document.getElementById('kiosk-mode');
+    const kioskIdleEl   = document.getElementById('kiosk-idle');
+    const kioskVideoEl  = document.getElementById('kiosk-video-wrap');
+    const kioskFrameEl  = document.getElementById('kiosk-frame-target');
+    const statusEl      = document.getElementById('kiosk-status');
+    const muteBtn       = document.getElementById('mute-btn');
+    const camBtn        = document.getElementById('cam-btn');
+
+    // ── Clock ──
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('kiosk-clock').textContent =
+        String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+      const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const months = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+      document.getElementById('kiosk-date').textContent =
+        `${days[now.getDay()]}  ·  ${months[now.getMonth()]} ${now.getDate()}`;
+    }
+    updateClock();
+    setInterval(updateClock, 10000);
+
+    // ── API ──
+    async function getRoomInfo() {
+      const res = await fetch('/api/check-room');
+      if (!res.ok) throw new Error('API error');
+      return res.json(); // { participants, roomUrl }
+    }
+
+    // ── CALLER: start ──
+    document.getElementById('start-call-btn').addEventListener('click', async () => {
+      if (callerCallActive) return;
+      callerCallActive = true;
+
+      callerModeEl.classList.add('hidden');
+      setTimeout(() => { callerModeEl.style.display = 'none'; }, 600);
+      callerCallEl.classList.add('active');
+
+      try {
+        const { roomUrl } = await getRoomInfo();
+
+        callObject = DailyIframe.createFrame(callerFrameEl, {
+          showLeaveButton: false,
+          showFullscreenButton: false,
+          iframeStyle: { position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' },
+        });
+
+        callObject.on('participant-joined', (e) => {
+          if (!e.participant.local) waitingEl.classList.add('hidden');
+        });
+
+        callObject.on('participant-left', () => {
+          const remotes = Object.values(callObject.participants()).filter(p => !p.local);
+          if (remotes.length === 0) waitingEl.classList.remove('hidden');
+        });
+
+        callObject.on('left-meeting', () => callerEnd(false));
+        callObject.on('error', () => callerEnd(false));
+
+        await callObject.join({ url: roomUrl, startVideoOff: false, startAudioOff: false });
+
+      } catch (err) {
+        console.error(err);
+        callerEnd(false);
+      }
+    });
+
+    async function callerEnd(leaveFirst = true) {
+      if (leaveFirst && callObject) { try { await callObject.leave(); } catch {} }
+      if (callObject) { callObject.destroy(); callObject = null; }
+      callerFrameEl.innerHTML = '';
+      callerCallActive = false;
+      muted = false; camOff = false;
+      muteBtn.classList.remove('off');
+      camBtn.classList.remove('off');
+      waitingEl.classList.remove('hidden');
+      callerCallEl.classList.remove('active');
+      callerModeEl.style.display = 'flex';
+      setTimeout(() => callerModeEl.classList.remove('hidden'), 20);
+    }
+
+    document.getElementById('hang-btn').addEventListener('click', () => callerEnd(true));
+
+    muteBtn.addEventListener('click', () => {
+      if (!callObject) return;
+      muted = !muted;
+      callObject.setLocalAudio(!muted);
+      muteBtn.classList.toggle('off', muted);
+    });
+
+    camBtn.addEventListener('click', () => {
+      if (!callObject) return;
+      camOff = !camOff;
+      callObject.setLocalVideo(!camOff);
+      camBtn.classList.toggle('off', camOff);
+    });
+
+    // ── KIOSK: enter ──
+    document.getElementById('enter-kiosk-btn').addEventListener('click', () => {
+      kioskMode = true;
+      callerModeEl.style.display = 'none';
+      kioskModeEl.classList.add('active');
+      statusEl.classList.add('polling');
+      kioskPoll();
+      setInterval(kioskPoll, 4000);
+    });
+
+    async function kioskPoll() {
+      if (kioskCallActive) return;
+      try {
+        const { participants, roomUrl } = await getRoomInfo();
+        if (participants > 0) {
+          statusEl.classList.add('incoming');
+          await kioskJoin(roomUrl);
+        } else {
+          statusEl.classList.remove('incoming');
+        }
+      } catch { /* silent */ }
+    }
+
+    async function kioskJoin(url) {
+      if (kioskCallActive) return;
+      kioskCallActive = true;
+      statusEl.classList.add('active');
+      kioskIdleEl.classList.add('hidden');
+      setTimeout(() => kioskVideoEl.classList.add('active'), 600);
+
+      callObject = DailyIframe.createFrame(kioskFrameEl, {
+        showLeaveButton: false,
+        showFullscreenButton: false,
+        iframeStyle: { position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' },
+      });
+
+      callObject.on('participant-left', () => {
+        const remotes = Object.values(callObject.participants()).filter(p => !p.local);
+        if (remotes.length === 0) kioskEnd();
+      });
+
+      callObject.on('left-meeting', () => kioskEnd());
+      callObject.on('error', () => kioskEnd());
+
+      await callObject.join({ url, startVideoOff: false, startAudioOff: false });
+    }
+
+    async function kioskEnd() {
+      if (!kioskCallActive) return;
+      kioskCallActive = false;
+      if (callObject) { callObject.destroy(); callObject = null; }
+      kioskFrameEl.innerHTML = '';
+      kioskVideoEl.classList.remove('active');
+      statusEl.classList.remove('active', 'incoming');
+      setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
+    }
+  </script>
+</body>
+</html>
