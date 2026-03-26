@@ -610,7 +610,7 @@
           async (payload) => {
             const count = payload.new.participants;
             console.log('[Realtime] room_presence UPDATE received:', JSON.stringify(payload.new));
-            if (count > 0 && !kioskCallActive) {
+            if (count > 0 && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 3000) {
               console.log('[Realtime] Incoming call detected, joining room');
               statusEl.classList.add('incoming');
               await kioskJoin(window._roomUrl);
@@ -626,6 +626,7 @@
     }
 
     let kioskEnding = false;
+    let kioskEndedAt = 0;
 
     async function kioskJoin(url) {
       if (kioskCallActive || kioskEnding) return;
@@ -658,11 +659,13 @@
       if (callObject) {
         const co = callObject;
         callObject = null;
+        try { await co.leave(); } catch (e) { console.warn('Daily leave error:', e); }
         try { await co.destroy(); } catch (e) { console.warn('Daily destroy error:', e); }
       }
       kioskFrameEl.innerHTML = '';
       kioskVideoEl.classList.remove('active');
       statusEl.classList.remove('active', 'incoming');
+      kioskEndedAt = Date.now();
       kioskEnding = false;
       setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
     }
