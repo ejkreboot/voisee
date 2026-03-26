@@ -1,35 +1,32 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export default async function handler(req, res) {
-  const apiKey = process.env.DAILY_API_KEY;
+  const domain   = process.env.DAILY_DOMAIN;
   const roomName = process.env.DAILY_ROOM_NAME;
 
-  if (!apiKey || !roomName) {
-    return res.status(500).json({ error: 'Missing environment variables' });
+  const missing = ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','DAILY_DOMAIN','DAILY_ROOM_NAME']
+    .filter(k => !process.env[k]);
+
+  if (missing.length) {
+    return res.status(500).json({ error: `Missing env vars: ${missing.join(', ')}` });
   }
 
-  try {
-    const response = await fetch(
-      `https://api.daily.co/v1/rooms/${roomName}/presence`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+  const { data, error } = await supabase
+    .from('room_presence')
+    .select('participants')
+    .eq('id', 'mom')
+    .single();
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Daily API error' });
-    }
+  if (error) return res.status(500).json({ error: error.message });
 
-    const data = await response.json();
-    const participantCount = data.total_count ?? 0;
-
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({
-      participants: participantCount,
-      roomUrl: `https://${process.env.DAILY_DOMAIN}.daily.co/${roomName}`,
-    });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).json({
+    participants: data.participants,
+    roomUrl: `https://${domain}.daily.co/${roomName}`,
+  });
 }

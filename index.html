@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@daily-co/daily-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -580,26 +581,43 @@
     });
 
     // ── KIOSK: enter ──
-    document.getElementById('enter-kiosk-btn').addEventListener('click', () => {
+    document.getElementById('enter-kiosk-btn').addEventListener('click', async () => {
       kioskMode = true;
       callerModeEl.style.display = 'none';
       kioskModeEl.classList.add('active');
       statusEl.classList.add('polling');
-      kioskPoll();
-      setInterval(kioskPoll, 4000);
+      await initKioskRealtime();
     });
 
-    async function kioskPoll() {
-      if (kioskCallActive) return;
-      try {
-        const { participants, roomUrl } = await getRoomInfo();
-        if (participants > 0) {
-          statusEl.classList.add('incoming');
-          await kioskJoin(roomUrl);
-        } else {
-          statusEl.classList.remove('incoming');
-        }
-      } catch { /* silent */ }
+    async function initKioskRealtime() {
+      // Fetch config + initial state from our API
+      const { roomUrl, participants } = await getRoomInfo();
+      window._roomUrl = roomUrl;
+
+      // If someone is already in the room when kiosk starts, join immediately
+      if (participants > 0) await kioskJoin(roomUrl);
+
+      // Subscribe to Supabase Realtime for instant push updates
+      const { supabaseUrl, supabaseAnonKey } = await fetch('/api/realtime-config')
+        .then(r => r.json());
+
+      const sb = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      sb.channel('room-presence')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: 'id=eq.mom' },
+          async (payload) => {
+            const count = payload.new.participants;
+            if (count > 0 && !kioskCallActive) {
+              statusEl.classList.add('incoming');
+              await kioskJoin(window._roomUrl);
+            } else if (count === 0 && kioskCallActive) {
+              await kioskEnd();
+            }
+          }
+        )
+        .subscribe();
     }
 
     async function kioskJoin(url) {
