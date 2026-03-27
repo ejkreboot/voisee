@@ -17,10 +17,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const action = req.body?.type ?? req.body?.action;
-  const room   = req.body?.payload?.room;
+  const action   = req.body?.type ?? req.body?.action;
+  const room     = req.body?.payload?.room;
+  const userName = req.body?.payload?.participant?.user_name || '';
+  const initial  = userName.charAt(0).toUpperCase() || '?';
 
-  console.log('Daily webhook received:', JSON.stringify({ action, room }));
+  console.log('Daily webhook received:', JSON.stringify({ action, room, userName, initial }));
 
   const isJoin  = action === 'participant.joined';
   const isLeave = action === 'participant.left';
@@ -35,11 +37,11 @@ export default async function handler(req, res) {
 
   try {
     if (isJoin) {
-      await supabase.rpc('increment_participants');
-      console.log('Incremented participants');
+      await supabase.rpc('add_participant', { p_initial: initial });
+      console.log('Added participant:', initial);
     } else {
-      await supabase.rpc('decrement_participants');
-      console.log('Decremented participants');
+      await supabase.rpc('remove_participant', { p_initial: initial });
+      console.log('Removed participant:', initial);
     }
     return res.status(200).json({ ok: true });
   } catch (err) {

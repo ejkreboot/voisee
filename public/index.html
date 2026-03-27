@@ -112,6 +112,11 @@
       color: var(--cream);
     }
 
+    .avatar.caller {
+      background: var(--accent-light);
+      color: var(--charcoal);
+    }
+
     .name-input-wrap {
       width: 100%;
       margin-bottom: 20px;
@@ -428,7 +433,7 @@
       <p class="subtext">She'll see you as soon as you connect</p>
 
       <div class="avatar-stack" id="avatar-stack">
-        <div class="avatar">M</div>
+        <div class="avatar mom">M</div>
       </div>
 
       <div class="name-input-wrap">
@@ -500,6 +505,7 @@
     let muted = false;
     let camOff = false;
     let callerName = '';
+    let lastKnownCount = 0;   // tracks last-seen participant count for change detection
 
     const callerModeEl  = document.getElementById('caller-mode');
     const callerCallEl  = document.getElementById('caller-call');
@@ -532,12 +538,27 @@
     const callBtn     = document.getElementById('start-call-btn');
     const avatarStack = document.getElementById('avatar-stack');
 
+    function renderAvatars(initials) {
+      // Keep only the static M avatar, remove all others
+      avatarStack.querySelectorAll('.avatar:not(.mom)').forEach(el => el.remove());
+      // Add an avatar for each caller initial from the DB
+      (initials || []).forEach(letter => {
+        const el = document.createElement('div');
+        el.className = 'avatar caller';
+        el.textContent = letter;
+        avatarStack.appendChild(el);
+      });
+    }
+
+    // Load current callers on page open
+    getRoomInfo().then(({ initials }) => renderAvatars(initials)).catch(() => {});
+
     nameInput.addEventListener('input', () => {
       const name = nameInput.value.trim();
       callerName = name;
       callBtn.disabled = name.length === 0;
 
-      // Update avatar stack: always show M for Mom, plus caller initial
+      // Update avatar stack: show caller's own initial preview
       const existingYou = avatarStack.querySelector('.avatar.you');
       if (name.length > 0) {
         const initial = name.charAt(0).toUpperCase();
@@ -564,7 +585,22 @@
     async function getRoomInfo() {
       const res = await fetch('/api/check-room');
       if (!res.ok) throw new Error('API error');
-      return res.json(); // { participants, roomUrl }
+      return res.json(); // { participants, initials, roomUrl }
+    }
+
+    // Reconcile the DB count against Daily's live presence API.
+    // Returns { participants, initials } on success, or null on failure.
+    async function syncRoom() {
+      try {
+        const res = await fetch('/api/sync-room');
+        if (!res.ok) throw new Error(`sync-room HTTP ${res.status}`);
+        const data = await res.json();
+        console.log('[SyncRoom] Reconciled with Daily:', data);
+        return data;
+      } catch (err) {
+        console.warn('[SyncRoom] Failed (non-fatal):', err.message);
+        return null;
+      }
     }
 
     // ── CALLER: start ──
@@ -635,24 +671,8 @@
       camBtn.classList.toggle('off', camOff);
     });
 
-    // ── KIOSK: enter ──
-    document.getElementById('enter-kiosk-btn').addEventListener('click', async () => {
-      kioskMode = true;
-      callerModeEl.style.display = 'none';
-      kioskModeEl.classList.add('active');
-      statusEl.classList.add('polling');
-      await initKioskRealtime();
-    });
-
-    async function initKioskRealtime() {
-      // Fetch config + initial state from our API
-      const { roomUrl, participants } = await getRoomInfo();
-      window._roomUrl = roomUrl;
-
-      // If someone is already in the room when kiosk starts, join immediately
-      if (participants > 0) await kioskJoin(roomUrl);
-
-      // Subscribe to Supabase Realtime for instant push updates
+    // ── Supabase Realtime (shared by caller + kiosk) ──
+    async function initRealtime() {
       const { supabaseUrl, supabaseAnonKey } = await fetch('/api/realtime-config')
         .then(r => r.json());
 
@@ -663,22 +683,63 @@
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: 'id=eq.kiosk' },
           async (payload) => {
-            const count = payload.new.participants;
-            console.log('[Realtime] room_presence UPDATE received:', JSON.stringify(payload.new));
-            if (count > 0 && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 3000) {
-              console.log('[Realtime] Incoming call detected, joining room');
-              statusEl.classList.add('incoming');
-              await kioskJoin(window._roomUrl);
-            } else if (count === 0 && kioskCallActive) {
-              console.log('[Realtime] All callers left, ending kiosk call');
-              await kioskEnd();
+            const count    = payload.new.participants;
+            const initials = payload.new.initials || [];
+            const prevCount = lastKnownCount;
+            lastKnownCount = count;
+            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`, initials);
+            if (!kioskMode) renderAvatars(initials);
+            if (kioskMode) {
+              // Only join on a genuine *increase* — prevents rejoining after a stale count stays > 0
+              if (count > 0 && count > prevCount && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
+                console.log(`[Realtime] New participant detected (${prevCount}→${count}), joining room`);
+                statusEl.classList.add('incoming');
+                await kioskJoin(window._roomUrl);
+              } else if (count === 0 && kioskCallActive) {
+                console.log('[Realtime] Room empty, ending kiosk call');
+                await kioskEnd();
+              }
             }
           }
         )
         .subscribe((status) => {
           console.log('[Realtime] Subscription status:', status);
+          if (status === 'SUBSCRIBED' && kioskMode && !kioskCallActive) {
+            // Re-check on reconnect in case we missed events during a dropout
+            syncRoom().then(data => {
+              if (!data) return;
+              if (data.participants > 0 && data.participants > lastKnownCount && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
+                console.log(`[Realtime] Reconnect: missed call detected (${lastKnownCount}→${data.participants}), joining`);
+                kioskJoin(window._roomUrl);
+              }
+              lastKnownCount = data.participants;
+            });
+          }
         });
     }
+
+    // Start realtime for all modes
+    initRealtime();
+
+    // ── KIOSK: enter ──
+    document.getElementById('enter-kiosk-btn').addEventListener('click', async () => {
+      kioskMode = true;
+      callerModeEl.style.display = 'none';
+      kioskModeEl.classList.add('active');
+      statusEl.classList.add('polling');
+
+      // Get room URL (always needed)
+      const { roomUrl } = await getRoomInfo();
+      window._roomUrl = roomUrl;
+
+      // Reconcile count against Daily before deciding whether to auto-join.
+      // This clears any stale participants left over from dropped connections.
+      const synced = await syncRoom();
+      const participants = synced ? synced.participants : 0;
+      lastKnownCount = participants;
+
+      if (participants > 0) await kioskJoin(roomUrl);
+    });
 
     let kioskEnding = false;
     let kioskEndedAt = 0;
@@ -704,7 +765,7 @@
       callObject.on('left-meeting', () => kioskEnd());
       callObject.on('error', () => kioskEnd());
 
-      await callObject.join({ url, startVideoOff: false, startAudioOff: false });
+      await callObject.join({ url, userName: 'Kiosk', startVideoOff: false, startAudioOff: false });
     }
 
     async function kioskEnd() {
@@ -723,6 +784,9 @@
       kioskEndedAt = Date.now();
       kioskEnding = false;
       setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
+      // Reconcile after a short delay to let Daily process the leave event,
+      // then catch any stale entries the webhook may have missed
+      setTimeout(() => syncRoom(), 6000);
     }
   </script>
 </body>

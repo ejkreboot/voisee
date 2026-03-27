@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('room_presence')
-    .select('participants')
+    .select('participants, initials')
     .eq('id', 'kiosk')
     .single();
 
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   return res.status(200).json({
     participants: data.participants,
+    initials: data.initials || [],
     roomUrl: `https://${domain}.daily.co/${roomName}`,
   });
 }
