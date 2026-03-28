@@ -83,39 +83,6 @@
       letter-spacing: 0.02em;
     }
 
-    .avatar-stack {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 52px;
-    }
-
-    .avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 3px solid var(--warm-white);
-      background: var(--cream);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'DM Serif Display', serif;
-      font-size: 22px;
-      color: var(--accent);
-      margin-left: -16px;
-    }
-
-    .avatar:first-child { margin-left: 0; }
-
-    .avatar.you {
-      background: var(--charcoal);
-      color: var(--cream);
-    }
-
-    .avatar.caller {
-      background: var(--accent-light);
-      color: var(--charcoal);
-    }
 
     .name-input-wrap {
       width: 100%;
@@ -432,10 +399,6 @@
       <h1 class="greeting">Call <em>Mom</em></h1>
       <p class="subtext">She'll see you as soon as you connect</p>
 
-      <div class="avatar-stack" id="avatar-stack">
-        <div class="avatar mom">M</div>
-      </div>
-
       <div class="name-input-wrap">
         <input type="text" class="name-input" id="name-input" placeholder="Your first name" maxlength="20" autocomplete="off">
       </div>
@@ -519,6 +482,20 @@
     const muteBtn       = document.getElementById('mute-btn');
     const camBtn        = document.getElementById('cam-btn');
 
+    // ── Clock drift (screen burn prevention) ──
+    let _clockDriftTimer = null;
+    function startClockDrift() {
+      const el = document.getElementById('kiosk-idle');
+      el.style.transition = 'transform 10s ease-in-out';
+      function drift() {
+        const x = Math.round((Math.random() - 0.5) * 60);
+        const y = Math.round((Math.random() - 0.5) * 40);
+        el.style.transform = `translate(${x}px, ${y}px)`;
+      }
+      drift();
+      _clockDriftTimer = setInterval(drift, 20000);
+    }
+
     // ── Clock ──
     function updateClock() {
       const now = new Date();
@@ -536,43 +513,11 @@
     // ── Name input ──
     const nameInput   = document.getElementById('name-input');
     const callBtn     = document.getElementById('start-call-btn');
-    const avatarStack = document.getElementById('avatar-stack');
-
-    function renderAvatars(initials) {
-      // Keep only the static M avatar, remove all others
-      avatarStack.querySelectorAll('.avatar:not(.mom)').forEach(el => el.remove());
-      // Add an avatar for each caller initial from the DB
-      (initials || []).forEach(letter => {
-        const el = document.createElement('div');
-        el.className = 'avatar caller';
-        el.textContent = letter;
-        avatarStack.appendChild(el);
-      });
-    }
-
-    // Load current callers on page open
-    getRoomInfo().then(({ initials }) => renderAvatars(initials)).catch(() => {});
 
     nameInput.addEventListener('input', () => {
       const name = nameInput.value.trim();
       callerName = name;
       callBtn.disabled = name.length === 0;
-
-      // Update avatar stack: show caller's own initial preview
-      const existingYou = avatarStack.querySelector('.avatar.you');
-      if (name.length > 0) {
-        const initial = name.charAt(0).toUpperCase();
-        if (existingYou) {
-          existingYou.textContent = initial;
-        } else {
-          const el = document.createElement('div');
-          el.className = 'avatar you';
-          el.textContent = initial;
-          avatarStack.appendChild(el);
-        }
-      } else if (existingYou) {
-        existingYou.remove();
-      }
     });
 
     nameInput.addEventListener('keydown', (e) => {
@@ -684,11 +629,9 @@
           { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: 'id=eq.kiosk' },
           async (payload) => {
             const count    = payload.new.participants;
-            const initials = payload.new.initials || [];
             const prevCount = lastKnownCount;
             lastKnownCount = count;
-            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`, initials);
-            if (!kioskMode) renderAvatars(initials);
+            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`);    
             if (kioskMode) {
               // Only join on a genuine *increase* — prevents rejoining after a stale count stays > 0
               if (count > 0 && count > prevCount && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
@@ -727,6 +670,7 @@
       callerModeEl.style.display = 'none';
       kioskModeEl.classList.add('active');
       statusEl.classList.add('polling');
+      startClockDrift();
 
       // Get room URL (always needed)
       const { roomUrl } = await getRoomInfo();
