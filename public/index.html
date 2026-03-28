@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Family Video Call</title>
+  <title>vintercom</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@daily-co/daily-js"></script>
@@ -389,6 +391,58 @@
     #kiosk-status.polling  { background: #1a2a1a; }
     #kiosk-status.incoming { background: #2a3a1a; }
     #kiosk-status.active   { background: #1a4a1a; }
+
+    /* ════════════════════════════════
+       KIOSK ENTRY MODAL
+    ════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,23,20,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-card {
+      background: var(--warm-white);
+      border-radius: 20px;
+      padding: 40px 36px 32px;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .modal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      color: var(--charcoal);
+      margin-bottom: 8px;
+    }
+    .modal-sub {
+      font-size: 14px;
+      color: var(--slate);
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 28px;
+      letter-spacing: 0.02em;
+    }
+    .field-error {
+      font-size: 13px;
+      color: var(--red);
+      text-align: center;
+      margin-bottom: 10px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -396,14 +450,19 @@
   <!-- ══ CALLER MODE ══ -->
   <div id="caller-mode">
     <div class="caller-inner">
-      <h1 class="greeting">Call <em>Mom</em></h1>
-      <p class="subtext">She'll see you as soon as you connect</p>
+      <img src="/logo.png" alt="vintercom" width="160" height="160" style="margin-bottom:8px;">
+      <h1 class="greeting"><em>vintercom</em></h1>
+      <p class="subtext">Enter your room name and password to connect</p>
 
       <div class="name-input-wrap">
-        <input type="text" class="name-input" id="name-input" placeholder="Your first name" maxlength="20" autocomplete="off">
+        <input type="text" class="name-input" id="room-input" placeholder="Room name" maxlength="40" autocomplete="off" spellcheck="false">
       </div>
+      <div class="name-input-wrap" style="margin-bottom:4px">
+        <input type="password" class="name-input" id="password-input" placeholder="Password" maxlength="100" autocomplete="off">
+      </div>
+      <p id="caller-auth-error" class="field-error">Invalid room or password.</p>
 
-      <button class="call-btn" id="start-call-btn" disabled>
+      <button class="call-btn" id="start-call-btn" disabled style="margin-top:12px">
         <span class="btn-icon">
           <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
         </span>
@@ -428,8 +487,8 @@
             <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
           </div>
         </div>
-        <div class="waiting-label">Connecting to Mom…</div>
-        <div class="waiting-sub">Her tablet will answer automatically</div>
+        <div class="waiting-label">Connecting…</div>
+        <div class="waiting-sub">The room will answer automatically</div>
       </div>
       <div id="caller-frame-target"></div>
     </div>
@@ -460,6 +519,20 @@
 
   <div id="kiosk-status"></div>
 
+  <!-- ══ KIOSK ENTRY MODAL ══ -->
+  <div class="modal-overlay" id="kiosk-entry-modal">
+    <div class="modal-card">
+      <h2 class="modal-title">Kiosk Mode</h2>
+      <p class="modal-sub">Enter the room name for this device.</p>
+      <div class="name-input-wrap" style="width:100%">
+        <input type="text" class="name-input" id="kiosk-room-input" placeholder="Room name" maxlength="40" autocomplete="off" spellcheck="false">
+      </div>
+      <p id="kiosk-room-error" class="field-error">Room not found.</p>
+      <button class="call-btn" id="kiosk-confirm-btn" disabled>Enter Kiosk Mode</button>
+      <button class="kiosk-btn" id="kiosk-cancel-btn" style="margin-top:12px;width:100%">Cancel</button>
+    </div>
+  </div>
+
   <script>
     let callObject = null;
     let kioskMode = false;
@@ -467,7 +540,9 @@
     let callerCallActive = false;
     let muted = false;
     let camOff = false;
-    let callerName = '';
+    let callerRoomName = '';
+    let callerPassword = '';
+    let kioskRoomName = '';
     let lastKnownCount = 0;   // tracks last-seen participant count for change detection
 
     const callerModeEl  = document.getElementById('caller-mode');
@@ -510,34 +585,50 @@
     updateClock();
     setInterval(updateClock, 10000);
 
-    // ── Name input ──
-    const nameInput   = document.getElementById('name-input');
-    const callBtn     = document.getElementById('start-call-btn');
+    // ── Caller inputs ──
+    const roomInput  = document.getElementById('room-input');
+    const pwInput    = document.getElementById('password-input');
+    const callBtn    = document.getElementById('start-call-btn');
+    const authError  = document.getElementById('caller-auth-error');
 
-    nameInput.addEventListener('input', () => {
-      const name = nameInput.value.trim();
-      callerName = name;
-      callBtn.disabled = name.length === 0;
-    });
+    function updateCallerBtn() {
+      callerRoomName = roomInput.value.trim();
+      callerPassword = pwInput.value;
+      callBtn.disabled = callerRoomName.length === 0 || callerPassword.length === 0;
+      authError.style.display = 'none';
+    }
 
-    nameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && callerName.length > 0) {
-        callBtn.click();
-      }
+    roomInput.addEventListener('input', updateCallerBtn);
+    pwInput.addEventListener('input', updateCallerBtn);
+    pwInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !callBtn.disabled) callBtn.click();
     });
 
     // ── API ──
-    async function getRoomInfo() {
-      const res = await fetch('/api/check-room');
-      if (!res.ok) throw new Error('API error');
+    async function getRoomInfo(roomName) {
+      const res = await fetch(`/api/check-room?roomName=${encodeURIComponent(roomName)}`);
+      if (!res.ok) throw new Error('Room not found');
       return res.json(); // { participants, initials, roomUrl }
+    }
+
+    async function verifyRoom(roomName, password) {
+      const res = await fetch('/api/verify-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Authentication failed');
+      }
+      return res.json(); // { roomUrl }
     }
 
     // Reconcile the DB count against Daily's live presence API.
     // Returns { participants, initials } on success, or null on failure.
-    async function syncRoom() {
+    async function syncRoom(roomName) {
       try {
-        const res = await fetch('/api/sync-room');
+        const res = await fetch(`/api/sync-room?roomName=${encodeURIComponent(roomName)}`);
         if (!res.ok) throw new Error(`sync-room HTTP ${res.status}`);
         const data = await res.json();
         console.log('[SyncRoom] Reconciled with Daily:', data);
@@ -551,15 +642,25 @@
     // ── CALLER: start ──
     document.getElementById('start-call-btn').addEventListener('click', async () => {
       if (callerCallActive) return;
-      callerCallActive = true;
 
+      // Verify credentials before proceeding
+      let roomUrl;
+      try {
+        callBtn.disabled = true;
+        ({ roomUrl } = await verifyRoom(callerRoomName, callerPassword));
+      } catch (err) {
+        console.warn('verify-room failed:', err.message);
+        authError.style.display = 'block';
+        callBtn.disabled = false;
+        return;
+      }
+
+      callerCallActive = true;
       callerModeEl.classList.add('hidden');
       setTimeout(() => { callerModeEl.style.display = 'none'; }, 600);
       callerCallEl.classList.add('active');
 
       try {
-        const { roomUrl } = await getRoomInfo();
-
         callObject = DailyIframe.createFrame(callerFrameEl, {
           showLeaveButton: false,
           showFullscreenButton: false,
@@ -578,7 +679,7 @@
         callObject.on('left-meeting', () => callerEnd(false));
         callObject.on('error', () => callerEnd(false));
 
-        await callObject.join({ url: roomUrl, userName: callerName || 'Guest', startVideoOff: false, startAudioOff: false });
+        await callObject.join({ url: roomUrl, userName: 'Caller', startVideoOff: false, startAudioOff: false });
 
       } catch (err) {
         console.error(err);
@@ -616,40 +717,38 @@
       camBtn.classList.toggle('off', camOff);
     });
 
-    // ── Supabase Realtime (shared by caller + kiosk) ──
-    async function initRealtime() {
+    // ── Supabase Realtime (kiosk only, started after room selection) ──
+    async function initRealtime(roomName) {
       const { supabaseUrl, supabaseAnonKey } = await fetch('/api/realtime-config')
         .then(r => r.json());
 
       const sb = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-      sb.channel('room-presence')
+      sb.channel(`room-presence-${roomName}`)
         .on(
           'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: 'id=eq.kiosk' },
+          { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: `id=eq.${roomName}` },
           async (payload) => {
             const count    = payload.new.participants;
             const prevCount = lastKnownCount;
             lastKnownCount = count;
-            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`);    
-            if (kioskMode) {
-              // Only join on a genuine *increase* — prevents rejoining after a stale count stays > 0
-              if (count > 0 && count > prevCount && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
-                console.log(`[Realtime] New participant detected (${prevCount}→${count}), joining room`);
-                statusEl.classList.add('incoming');
-                await kioskJoin(window._roomUrl);
-              } else if (count === 0 && kioskCallActive) {
-                console.log('[Realtime] Room empty, ending kiosk call');
-                await kioskEnd();
-              }
+            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`);
+            // Only join on a genuine *increase* — prevents rejoining after a stale count stays > 0
+            if (count > 0 && count > prevCount && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
+              console.log(`[Realtime] New participant detected (${prevCount}→${count}), joining room`);
+              statusEl.classList.add('incoming');
+              await kioskJoin(window._roomUrl);
+            } else if (count === 0 && kioskCallActive) {
+              console.log('[Realtime] Room empty, ending kiosk call');
+              await kioskEnd();
             }
           }
         )
         .subscribe((status) => {
           console.log('[Realtime] Subscription status:', status);
-          if (status === 'SUBSCRIBED' && kioskMode && !kioskCallActive) {
+          if (status === 'SUBSCRIBED' && !kioskCallActive) {
             // Re-check on reconnect in case we missed events during a dropout
-            syncRoom().then(data => {
+            syncRoom(roomName).then(data => {
               if (!data) return;
               if (data.participants > 0 && data.participants > lastKnownCount && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
                 console.log(`[Realtime] Reconnect: missed call detected (${lastKnownCount}→${data.participants}), joining`);
@@ -661,28 +760,67 @@
         });
     }
 
-    // Start realtime for all modes
-    initRealtime();
+    // ── KIOSK: entry modal ──
+    const kioskModal      = document.getElementById('kiosk-entry-modal');
+    const kioskRoomInput  = document.getElementById('kiosk-room-input');
+    const kioskConfirmBtn = document.getElementById('kiosk-confirm-btn');
+    const kioskCancelBtn  = document.getElementById('kiosk-cancel-btn');
+    const kioskRoomError  = document.getElementById('kiosk-room-error');
 
-    // ── KIOSK: enter ──
-    document.getElementById('enter-kiosk-btn').addEventListener('click', async () => {
+    document.getElementById('enter-kiosk-btn').addEventListener('click', () => {
+      kioskModal.classList.add('visible');
+      setTimeout(() => kioskRoomInput.focus(), 50);
+    });
+
+    kioskRoomInput.addEventListener('input', () => {
+      kioskConfirmBtn.disabled = kioskRoomInput.value.trim().length === 0;
+      kioskRoomError.style.display = 'none';
+    });
+
+    kioskRoomInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !kioskConfirmBtn.disabled) kioskConfirmBtn.click();
+      if (e.key === 'Escape') kioskCancelBtn.click();
+    });
+
+    kioskCancelBtn.addEventListener('click', () => {
+      kioskModal.classList.remove('visible');
+      kioskRoomInput.value = '';
+      kioskConfirmBtn.disabled = true;
+      kioskRoomError.style.display = 'none';
+    });
+
+    kioskConfirmBtn.addEventListener('click', async () => {
+      const rn = kioskRoomInput.value.trim();
+      kioskConfirmBtn.disabled = true;
+
+      let roomInfo;
+      try {
+        roomInfo = await getRoomInfo(rn);
+      } catch (err) {
+        console.warn('check-room failed:', err.message);
+        kioskRoomError.style.display = 'block';
+        kioskConfirmBtn.disabled = false;
+        return;
+      }
+
+      kioskRoomName = rn;
+      kioskModal.classList.remove('visible');
       kioskMode = true;
       callerModeEl.style.display = 'none';
       kioskModeEl.classList.add('active');
       statusEl.classList.add('polling');
       startClockDrift();
 
-      // Get room URL (always needed)
-      const { roomUrl } = await getRoomInfo();
-      window._roomUrl = roomUrl;
+      window._roomUrl = roomInfo.roomUrl;
+      await initRealtime(kioskRoomName);
 
       // Reconcile count against Daily before deciding whether to auto-join.
       // This clears any stale participants left over from dropped connections.
-      const synced = await syncRoom();
+      const synced = await syncRoom(kioskRoomName);
       const participants = synced ? synced.participants : 0;
       lastKnownCount = participants;
 
-      if (participants > 0) await kioskJoin(roomUrl);
+      if (participants > 0) await kioskJoin(roomInfo.roomUrl);
     });
 
     let kioskEnding = false;
@@ -730,7 +868,7 @@
       setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
       // Reconcile after a short delay to let Daily process the leave event,
       // then catch any stale entries the webhook may have missed
-      setTimeout(() => syncRoom(), 6000);
+      setTimeout(() => syncRoom(kioskRoomName), 6000);
     }
   </script>
 </body>
