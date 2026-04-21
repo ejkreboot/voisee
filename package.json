@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "start": "vercel dev"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1"
   }

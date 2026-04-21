@@ -1,887 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>vintercom</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@daily-co/daily-js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --cream: #f5f0e8;
-      --warm-white: #faf8f4;
-      --stone: #c8bfb0;
-      --slate: #7a7268;
-      --charcoal: #2a2520;
-      --ink: #1a1714;
-      --accent: #8b6f47;
-      --accent-light: #c4a882;
-      --green: #4a7c59;
-      --red: #8b3a3a;
-    }
-
-    html, body {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      background: var(--ink);
-      font-family: 'DM Sans', sans-serif;
-    }
-
-    /* ════════════════════════════════
-       CALLER MODE
-    ════════════════════════════════ */
-    #caller-mode {
-      position: absolute;
-      inset: 0;
-      background: var(--warm-white);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      transition: opacity 0.6s ease;
-    }
-
-    #caller-mode.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .caller-inner {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .greeting {
-      font-family: 'DM Serif Display', serif;
-      font-size: 42px;
-      color: var(--charcoal);
-      text-align: center;
-      line-height: 1.15;
-      margin-bottom: 10px;
-    }
-
-    .greeting em {
-      font-style: italic;
-      color: var(--accent);
-    }
-
-    .subtext {
-      font-size: 15px;
-      color: var(--slate);
-      font-weight: 300;
-      text-align: center;
-      margin-bottom: 52px;
-      letter-spacing: 0.02em;
-    }
-
-
-    .name-input-wrap {
-      width: 100%;
-      margin-bottom: 20px;
-    }
-
-    .name-input {
-      width: 100%;
-      padding: 16px 20px;
-      border: 1.5px solid var(--stone);
-      border-radius: 12px;
-      background: var(--warm-white);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 16px;
-      color: var(--charcoal);
-      text-align: center;
-      letter-spacing: 0.02em;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .name-input::placeholder { color: var(--stone); }
-    .name-input:focus { border-color: var(--accent); }
-
-    .call-btn {
-      width: 100%;
-      padding: 20px 32px;
-      background: var(--charcoal);
-      color: var(--cream);
-      border: none;
-      border-radius: 14px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 17px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      transition: background 0.2s, transform 0.15s;
-      margin-bottom: 16px;
-    }
-
-    .call-btn:hover:not(:disabled) { background: var(--accent); transform: translateY(-1px); }
-    .call-btn:active:not(:disabled) { transform: translateY(0); }
-    .call-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .call-btn .btn-icon {
-      width: 22px;
-      height: 22px;
-      background: var(--green);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .call-btn .btn-icon svg { width: 11px; height: 11px; fill: white; }
-
-    .kiosk-btn {
-      background: none;
-      border: 1.5px solid var(--stone);
-      border-radius: 10px;
-      padding: 13px 24px;
-      width: 100%;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      color: var(--slate);
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-      letter-spacing: 0.03em;
-    }
-
-    .kiosk-btn:hover { border-color: var(--accent-light); color: var(--accent); }
-
-    .divider {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin: 4px 0 16px;
-    }
-
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--stone);
-      opacity: 0.4;
-    }
-
-    .divider span {
-      font-size: 11px;
-      color: var(--stone);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    /* ════════════════════════════════
-       CALLER IN-CALL
-    ════════════════════════════════ */
-    #caller-call {
-      position: absolute;
-      inset: 0;
-      background: var(--ink);
-      display: none;
-      flex-direction: column;
-    }
-
-    #caller-call.active { display: flex; }
-
-    #caller-video-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-    }
-
-    #caller-frame-target {
-      position: absolute;
-      inset: 0;
-    }
-
-    #caller-frame-target iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    #waiting-overlay {
-      position: absolute;
-      inset: 0;
-      background: var(--ink);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 28px;
-      transition: opacity 0.6s ease;
-      z-index: 10;
-    }
-
-    #waiting-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .waiting-label {
-      font-family: 'DM Serif Display', serif;
-      font-size: 28px;
-      color: var(--cream);
-      text-align: center;
-    }
-
-    .waiting-sub {
-      font-size: 14px;
-      color: var(--slate);
-      font-weight: 300;
-      letter-spacing: 0.04em;
-    }
-
-    .pulse-ring-wrap {
-      position: relative;
-      width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .pulse-ring {
-      position: absolute;
-      border-radius: 50%;
-      border: 1.5px solid var(--accent-light);
-      animation: pulse-out 2.4s ease-out infinite;
-      opacity: 0;
-    }
-
-    .pulse-ring:nth-child(1) { width: 60px;  height: 60px;  animation-delay: 0s; }
-    .pulse-ring:nth-child(2) { width: 80px;  height: 80px;  animation-delay: 0.6s; }
-    .pulse-ring:nth-child(3) { width: 100px; height: 100px; animation-delay: 1.2s; }
-
-    @keyframes pulse-out {
-      0%   { transform: scale(0.7); opacity: 0.7; }
-      100% { transform: scale(1.2); opacity: 0; }
-    }
-
-    .pulse-center {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1;
-    }
-
-    .pulse-center svg { width: 20px; height: 20px; fill: white; }
-
-    #caller-controls {
-      padding: 20px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      background: var(--ink);
-      border-top: 1px solid #2a2520;
-    }
-
-    .ctrl-btn {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.2s, transform 0.15s;
-    }
-
-    .ctrl-btn:hover { opacity: 0.8; transform: scale(1.05); }
-    .ctrl-btn:active { transform: scale(0.95); }
-    .ctrl-btn svg { width: 20px; height: 20px; fill: white; }
-    .ctrl-btn.mute { background: #333028; }
-    .ctrl-btn.hang { background: var(--red); width: 64px; height: 64px; }
-    .ctrl-btn.cam  { background: #333028; }
-    .ctrl-btn.off  { background: #5a1a1a; }
-
-    /* ════════════════════════════════
-       KIOSK MODE
-    ════════════════════════════════ */
-    #kiosk-mode {
-      position: absolute;
-      inset: 0;
-      background: #000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #kiosk-mode.active { display: flex; }
-
-    #kiosk-idle {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: opacity 0.8s ease;
-    }
-
-    #kiosk-idle.hidden { opacity: 0; pointer-events: none; }
-
-    #kiosk-clock {
-      font-size: 88px;
-      font-weight: 200;
-      letter-spacing: -3px;
-      color: #2a2a2a;
-      font-variant-numeric: tabular-nums;
-    }
-
-    #kiosk-date {
-      font-size: 13px;
-      font-weight: 300;
-      color: #1e1e1e;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-
-    #kiosk-video-wrap {
-      position: absolute;
-      inset: 0;
-      display: none;
-    }
-
-    #kiosk-video-wrap.active { display: block; }
-
-    #kiosk-frame-target {
-      position: absolute;
-      inset: 0;
-    }
-
-    #kiosk-frame-target iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    #kiosk-status {
-      position: fixed;
-      bottom: 14px;
-      right: 14px;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #111;
-      transition: background 0.5s;
-      z-index: 100;
-    }
-
-    #kiosk-status.polling  { background: #1a2a1a; }
-    #kiosk-status.incoming { background: #2a3a1a; }
-    #kiosk-status.active   { background: #1a4a1a; }
-
-    /* ════════════════════════════════
-       KIOSK ENTRY MODAL
-    ════════════════════════════════ */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(26,23,20,0.72);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      padding: 24px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .modal-overlay.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .modal-card {
-      background: var(--warm-white);
-      border-radius: 20px;
-      padding: 40px 36px 32px;
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .modal-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 28px;
-      color: var(--charcoal);
-      margin-bottom: 8px;
-    }
-    .modal-sub {
-      font-size: 14px;
-      color: var(--slate);
-      font-weight: 300;
-      text-align: center;
-      margin-bottom: 28px;
-      letter-spacing: 0.02em;
-    }
-    .field-error {
-      font-size: 13px;
-      color: var(--red);
-      text-align: center;
-      margin-bottom: 10px;
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voisee - Stay Connected to Your Loved Ones</title>
+    <meta name="description" content="Voisee makes video calling effortless for those who can't operate devices on their own. Secure, simple, and always available.">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- ══ CALLER MODE ══ -->
-  <div id="caller-mode">
-    <div class="caller-inner">
-      <img src="/logo.png" alt="vintercom" width="160" height="160" style="margin-bottom:8px;">
-      <h1 class="greeting"><em>vintercom</em></h1>
-      <p class="subtext">Enter your room name and password to connect</p>
-
-      <div class="name-input-wrap">
-        <input type="text" class="name-input" id="room-input" placeholder="Room name" maxlength="40" autocomplete="off" spellcheck="false">
-      </div>
-      <div class="name-input-wrap" style="margin-bottom:4px">
-        <input type="password" class="name-input" id="password-input" placeholder="Password" maxlength="100" autocomplete="off">
-      </div>
-      <p id="caller-auth-error" class="field-error">Invalid room or password.</p>
-
-      <button class="call-btn" id="start-call-btn" disabled style="margin-top:12px">
-        <span class="btn-icon">
-          <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
-        </span>
-        Start Video Call
-      </button>
-
-      <div class="divider"><span>or</span></div>
-
-      <button class="kiosk-btn" id="enter-kiosk-btn">Enter Kiosk Mode</button>
-    </div>
-  </div>
-
-  <!-- ══ CALLER IN-CALL ══ -->
-  <div id="caller-call">
-    <div id="caller-video-wrap">
-      <div id="waiting-overlay">
-        <div class="pulse-ring-wrap">
-          <div class="pulse-ring"></div>
-          <div class="pulse-ring"></div>
-          <div class="pulse-ring"></div>
-          <div class="pulse-center">
-            <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
-          </div>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="#" class="logo">
+                    <img src="/logo_for_light_backgrounds.png" alt="Voisee" class="logo-img">
+                </a>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#security">Security</a>
+                    <a href="#connect" class="btn-primary-small">Get Started</a>
+                </div>
+                <button class="mobile-menu-btn" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
         </div>
-        <div class="waiting-label">Connecting…</div>
-        <div class="waiting-sub">The room will answer automatically</div>
-      </div>
-      <div id="caller-frame-target"></div>
-    </div>
+    </nav>
 
-    <div id="caller-controls">
-      <button class="ctrl-btn mute" id="mute-btn" title="Mute">
-        <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm-1 16.93A7.001 7.001 0 0 1 5 11H3a9 9 0 0 0 8 8.94V22h2v-2.06A9 9 0 0 0 21 11h-2a7 7 0 0 1-6 6.93V17.93z"/></svg>
-      </button>
-      <button class="ctrl-btn hang" id="hang-btn" title="End call">
-        <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.77 7.46 7 12 7s8.66 1.77 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
-      </button>
-      <button class="ctrl-btn cam" id="cam-btn" title="Toggle camera">
-        <svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-      </button>
-    </div>
-  </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-overlay"></div>
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Stay Connected to the Ones Who Matter Most</h1>
+                <p class="hero-subtitle">Video calling made effortless for those who can't operate devices on their own. No buttons to press, no apps to learn, just connection.</p>
+                <div class="hero-cta">
+                    <a href="#connect" class="btn-primary">Start Connecting</a>
+                    <a href="#how-it-works" class="btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </div>
+        <div class="hero-image-wrapper">
+            <img src="/images/AdobeStock_617276593_with_photo.jpg" alt="Family staying connected" class="hero-image">
+        </div>
+    </section>
 
-  <!-- ══ KIOSK MODE ══ -->
-  <div id="kiosk-mode">
-    <div id="kiosk-idle">
-      <div id="kiosk-clock">00:00</div>
-      <div id="kiosk-date"></div>
-    </div>
-    <div id="kiosk-video-wrap">
-      <div id="kiosk-frame-target"></div>
-    </div>
-  </div>
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Built for Those Who Need It Most</h2>
+                <p>Voisee was designed from the ground up for individuals who struggle with traditional technology</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3>Enterprise-Grade Security</h3>
+                    <p>Password-protected rooms with end-to-end encryption. Your conversations stay private and secure.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3>Zero Learning Curve</h3>
+                    <p>No apps to download, no buttons to remember. Just turn on the device and receive calls automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3>Always Available</h3>
+                    <p>Kiosk mode means your loved ones are always just one click away. No scheduling, no missed calls.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </div>
+                    <h3>Perfect for Caregiving</h3>
+                    <p>Check in on elderly parents, grandparents, or anyone who needs regular connection and support.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3>Works Everywhere</h3>
+                    <p>Browser-based technology means it works on any device - tablets, laptops, smartphones, no downloads required.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <h3>Privacy First</h3>
+                    <p>No data collection, no tracking, no surveillance. Your private moments stay private.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-  <div id="kiosk-status"></div>
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>Simple Setup, Effortless Connection</h2>
+                <p>Get started in minutes, stay connected forever</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Set Up the Kiosk</h3>
+                        <p>Place a tablet or device with your loved one. Open Voisee in kiosk mode - it auto-answers all incoming calls.</p>
+                    </div>
+                    <div class="step-image">
+                        <img src="/images/AdobeStock_213551738.jpeg" alt="Setup device" loading="lazy">
+                    </div>
+                </div>
+                <div class="step step-reverse">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Share Your Room Code</h3>
+                        <p>Create a secure room with a password. Share it with family members who should have access.</p>
+                    </div>
+                    <div class="step-image">
+                        <img src="/images/AdobeStock_129288769.jpeg" alt="Share access" loading="lazy">
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Connect Anytime</h3>
+                        <p>From your phone, tablet, or computer, enter the room code and connect instantly. No apps needed.</p>
+                    </div>
+                    <div class="step-image">
+                        <img src="/images/AdobeStock_617276593_with_photo.jpg" alt="Connect instantly" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-  <!-- ══ KIOSK ENTRY MODAL ══ -->
-  <div class="modal-overlay" id="kiosk-entry-modal">
-    <div class="modal-card">
-      <h2 class="modal-title">Kiosk Mode</h2>
-      <p class="modal-sub">Enter the room name for this device.</p>
-      <div class="name-input-wrap" style="width:100%">
-        <input type="text" class="name-input" id="kiosk-room-input" placeholder="Room name" maxlength="40" autocomplete="off" spellcheck="false">
-      </div>
-      <p id="kiosk-room-error" class="field-error">Room not found.</p>
-      <button class="call-btn" id="kiosk-confirm-btn" disabled>Enter Kiosk Mode</button>
-      <button class="kiosk-btn" id="kiosk-cancel-btn" style="margin-top:12px;width:100%">Cancel</button>
-    </div>
-  </div>
+    <!-- Use Case / Testimonial Section -->
+    <section class="testimonial">
+        <div class="testimonial-overlay"></div>
+        <div class="container">
+            <div class="testimonial-content">
+                <div class="quote-icon">"</div>
+                <blockquote>
+                    <p>My grandmother lives alone and can't figure out how to answer FaceTime. With Voisee, I just set up an old tablet at her place, and now I can check in on her every day. She doesn't have to do anything - it just works.</p>
+                </blockquote>
+                <cite>— Sarah M., Family Caregiver</cite>
+            </div>
+        </div>
+        <div class="testimonial-image-wrapper">
+            <img src="/images/AdobeStock_213551738.jpeg" alt="Happy senior staying connected" class="testimonial-image">
+        </div>
+    </section>
 
-  <script>
-    let callObject = null;
-    let kioskMode = false;
-    let kioskCallActive = false;
-    let callerCallActive = false;
-    let muted = false;
-    let camOff = false;
-    let callerRoomName = '';
-    let callerPassword = '';
-    let kioskRoomName = '';
-    let lastKnownCount = 0;   // tracks last-seen participant count for change detection
+    <!-- Security Section -->
+    <section id="security" class="security">
+        <div class="container">
+            <div class="security-content">
+                <div class="security-text">
+                    <h2>Your Security is Our Priority</h2>
+                    <div class="security-features">
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <div>
+                                <h4>Password Protected</h4>
+                                <p>Every room requires a secure password that you control</p>
+                            </div>
+                        </div>
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <div>
+                                <h4>End-to-End Encryption</h4>
+                                <p>Your video calls are encrypted and never stored</p>
+                            </div>
+                        </div>
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                            <div>
+                                <h4>No Data Collection</h4>
+                                <p>We don't track, store, or sell your personal information</p>
+                            </div>
+                        </div>
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                            </svg>
+                            <div>
+                                <h4>Self-Hosted Ready</h4>
+                                <p>Want complete control? Host Voisee on your own infrastructure</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="security-image">
+                    <img src="/images/AdobeStock_129288769.jpeg" alt="Secure connection" loading="lazy">
+                </div>
+            </div>
+        </div>
+    </section>
 
-    const callerModeEl  = document.getElementById('caller-mode');
-    const callerCallEl  = document.getElementById('caller-call');
-    const callerFrameEl = document.getElementById('caller-frame-target');
-    const waitingEl     = document.getElementById('waiting-overlay');
-    const kioskModeEl   = document.getElementById('kiosk-mode');
-    const kioskIdleEl   = document.getElementById('kiosk-idle');
-    const kioskVideoEl  = document.getElementById('kiosk-video-wrap');
-    const kioskFrameEl  = document.getElementById('kiosk-frame-target');
-    const statusEl      = document.getElementById('kiosk-status');
-    const muteBtn       = document.getElementById('mute-btn');
-    const camBtn        = document.getElementById('cam-btn');
+    <!-- CTA / Connect Section -->
+    <section id="connect" class="connect">
+        <div class="container">
+            <div class="connect-content">
+                <h2>Ready to Connect?</h2>
+                <p class="connect-subtitle">Choose how you want to use Voisee</p>
+                
+                <div class="connect-modes">
+                    <div class="mode-card">
+                        <h3>Caller Mode</h3>
+                        <p>Call your loved ones from any device</p>
+                        <div class="form-group">
+                            <label for="caller-room">Room Name</label>
+                            <input type="text" id="caller-room" placeholder="Enter room name">
+                        </div>
+                        <div class="form-group">
+                            <label for="caller-password">Password</label>
+                            <input type="password" id="caller-password" placeholder="Enter password">
+                        </div>
+                        <button class="btn-primary" onclick="joinAsCaller()">Join as Caller</button>
+                    </div>
+                    
+                    <div class="mode-card mode-card-featured">
+                        <div class="featured-badge">Recommended for Setup</div>
+                        <h3>Kiosk Mode</h3>
+                        <p>Set up a device to auto-answer all calls</p>
+                        <div class="form-group">
+                            <label for="kiosk-room">Room Name</label>
+                            <input type="text" id="kiosk-room" placeholder="Enter room name">
+                        </div>
+                        <div class="form-group">
+                            <label for="kiosk-password">Password</label>
+                            <input type="password" id="kiosk-password" placeholder="Enter password">
+                        </div>
+                        <button class="btn-primary" onclick="joinAsKiosk()">Setup Kiosk Mode</button>
+                        <p class="helper-text">Device will automatically answer all incoming calls</p>
+                    </div>
+                </div>
+                
+                <div class="connect-info">
+                    <div class="info-icon">💡</div>
+                    <p><strong>First time?</strong> Create a memorable room name and secure password. Share these with family members who should have access.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    // ── Clock drift (screen burn prevention) ──
-    let _clockDriftTimer = null;
-    function startClockDrift() {
-      const el = document.getElementById('kiosk-idle');
-      el.style.transition = 'transform 10s ease-in-out';
-      function drift() {
-        const x = Math.round((Math.random() - 0.5) * 60);
-        const y = Math.round((Math.random() - 0.5) * 40);
-        el.style.transform = `translate(${x}px, ${y}px)`;
-      }
-      drift();
-      _clockDriftTimer = setInterval(drift, 20000);
-    }
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="/logo_for_dark_backgrounds.png" alt="Voisee" class="footer-logo">
+                    <p>Keeping families connected, one call at a time.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#how-it-works">How It Works</a>
+                        <a href="#security">Security</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Support</h4>
+                        <a href="#connect">Get Started</a>
+                        <a href="mailto:support@voisee.com">Contact Us</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Voisee. Designed for connection, built with care.</p>
+            </div>
+        </div>
+    </footer>
 
-    // ── Clock ──
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('kiosk-clock').textContent =
-        String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-      const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const months = ['January','February','March','April','May','June',
-                      'July','August','September','October','November','December'];
-      document.getElementById('kiosk-date').textContent =
-        `${days[now.getDay()]}  ·  ${months[now.getMonth()]} ${now.getDate()}`;
-    }
-    updateClock();
-    setInterval(updateClock, 10000);
-
-    // ── Caller inputs ──
-    const roomInput  = document.getElementById('room-input');
-    const pwInput    = document.getElementById('password-input');
-    const callBtn    = document.getElementById('start-call-btn');
-    const authError  = document.getElementById('caller-auth-error');
-
-    function updateCallerBtn() {
-      callerRoomName = roomInput.value.trim();
-      callerPassword = pwInput.value;
-      callBtn.disabled = callerRoomName.length === 0 || callerPassword.length === 0;
-      authError.style.display = 'none';
-    }
-
-    roomInput.addEventListener('input', updateCallerBtn);
-    pwInput.addEventListener('input', updateCallerBtn);
-    pwInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !callBtn.disabled) callBtn.click();
-    });
-
-    // ── API ──
-    async function getRoomInfo(roomName) {
-      const res = await fetch(`/api/check-room?roomName=${encodeURIComponent(roomName)}`);
-      if (!res.ok) throw new Error('Room not found');
-      return res.json(); // { participants, initials, roomUrl }
-    }
-
-    async function verifyRoom(roomName, password) {
-      const res = await fetch('/api/verify-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomName, password }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Authentication failed');
-      }
-      return res.json(); // { roomUrl }
-    }
-
-    // Reconcile the DB count against Daily's live presence API.
-    // Returns { participants, initials } on success, or null on failure.
-    async function syncRoom(roomName) {
-      try {
-        const res = await fetch(`/api/sync-room?roomName=${encodeURIComponent(roomName)}`);
-        if (!res.ok) throw new Error(`sync-room HTTP ${res.status}`);
-        const data = await res.json();
-        console.log('[SyncRoom] Reconciled with Daily:', data);
-        return data;
-      } catch (err) {
-        console.warn('[SyncRoom] Failed (non-fatal):', err.message);
-        return null;
-      }
-    }
-
-    // ── CALLER: start ──
-    document.getElementById('start-call-btn').addEventListener('click', async () => {
-      if (callerCallActive) return;
-
-      // Verify credentials before proceeding
-      let roomUrl;
-      try {
-        callBtn.disabled = true;
-        ({ roomUrl } = await verifyRoom(callerRoomName, callerPassword));
-      } catch (err) {
-        console.warn('verify-room failed:', err.message);
-        authError.style.display = 'block';
-        callBtn.disabled = false;
-        return;
-      }
-
-      callerCallActive = true;
-      callerModeEl.classList.add('hidden');
-      setTimeout(() => { callerModeEl.style.display = 'none'; }, 600);
-      callerCallEl.classList.add('active');
-
-      try {
-        callObject = DailyIframe.createFrame(callerFrameEl, {
-          showLeaveButton: false,
-          showFullscreenButton: false,
-          iframeStyle: { position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' },
-        });
-
-        callObject.on('participant-joined', (e) => {
-          if (!e.participant.local) waitingEl.classList.add('hidden');
-        });
-
-        callObject.on('participant-left', () => {
-          const remotes = Object.values(callObject.participants()).filter(p => !p.local);
-          if (remotes.length === 0) waitingEl.classList.remove('hidden');
-        });
-
-        callObject.on('left-meeting', () => callerEnd(false));
-        callObject.on('error', () => callerEnd(false));
-
-        await callObject.join({ url: roomUrl, userName: 'Caller', startVideoOff: false, startAudioOff: false });
-
-      } catch (err) {
-        console.error(err);
-        callerEnd(false);
-      }
-    });
-
-    async function callerEnd(leaveFirst = true) {
-      if (leaveFirst && callObject) { try { await callObject.leave(); } catch {} }
-      if (callObject) { callObject.destroy(); callObject = null; }
-      callerFrameEl.innerHTML = '';
-      callerCallActive = false;
-      muted = false; camOff = false;
-      muteBtn.classList.remove('off');
-      camBtn.classList.remove('off');
-      waitingEl.classList.remove('hidden');
-      callerCallEl.classList.remove('active');
-      callerModeEl.style.display = 'flex';
-      setTimeout(() => callerModeEl.classList.remove('hidden'), 20);
-    }
-
-    document.getElementById('hang-btn').addEventListener('click', () => callerEnd(true));
-
-    muteBtn.addEventListener('click', () => {
-      if (!callObject) return;
-      muted = !muted;
-      callObject.setLocalAudio(!muted);
-      muteBtn.classList.toggle('off', muted);
-    });
-
-    camBtn.addEventListener('click', () => {
-      if (!callObject) return;
-      camOff = !camOff;
-      callObject.setLocalVideo(!camOff);
-      camBtn.classList.toggle('off', camOff);
-    });
-
-    // ── Supabase Realtime (kiosk only, started after room selection) ──
-    async function initRealtime(roomName) {
-      const { supabaseUrl, supabaseAnonKey } = await fetch('/api/realtime-config')
-        .then(r => r.json());
-
-      const sb = supabase.createClient(supabaseUrl, supabaseAnonKey);
-
-      sb.channel(`room-presence-${roomName}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'room_presence', filter: `id=eq.${roomName}` },
-          async (payload) => {
-            const count    = payload.new.participants;
-            const prevCount = lastKnownCount;
-            lastKnownCount = count;
-            console.log(`[Realtime] room_presence UPDATE: participants ${prevCount}→${count}`);
-            // Only join on a genuine *increase* — prevents rejoining after a stale count stays > 0
-            if (count > 0 && count > prevCount && !kioskCallActive && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
-              console.log(`[Realtime] New participant detected (${prevCount}→${count}), joining room`);
-              statusEl.classList.add('incoming');
-              await kioskJoin(window._roomUrl);
-            } else if (count === 0 && kioskCallActive) {
-              console.log('[Realtime] Room empty, ending kiosk call');
-              await kioskEnd();
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('[Realtime] Subscription status:', status);
-          if (status === 'SUBSCRIBED' && !kioskCallActive) {
-            // Re-check on reconnect in case we missed events during a dropout
-            syncRoom(roomName).then(data => {
-              if (!data) return;
-              if (data.participants > 0 && data.participants > lastKnownCount && !kioskEnding && Date.now() - kioskEndedAt > 5000) {
-                console.log(`[Realtime] Reconnect: missed call detected (${lastKnownCount}→${data.participants}), joining`);
-                kioskJoin(window._roomUrl);
-              }
-              lastKnownCount = data.participants;
-            });
-          }
-        });
-    }
-
-    // ── KIOSK: entry modal ──
-    const kioskModal      = document.getElementById('kiosk-entry-modal');
-    const kioskRoomInput  = document.getElementById('kiosk-room-input');
-    const kioskConfirmBtn = document.getElementById('kiosk-confirm-btn');
-    const kioskCancelBtn  = document.getElementById('kiosk-cancel-btn');
-    const kioskRoomError  = document.getElementById('kiosk-room-error');
-
-    document.getElementById('enter-kiosk-btn').addEventListener('click', () => {
-      kioskModal.classList.add('visible');
-      setTimeout(() => kioskRoomInput.focus(), 50);
-    });
-
-    kioskRoomInput.addEventListener('input', () => {
-      kioskConfirmBtn.disabled = kioskRoomInput.value.trim().length === 0;
-      kioskRoomError.style.display = 'none';
-    });
-
-    kioskRoomInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !kioskConfirmBtn.disabled) kioskConfirmBtn.click();
-      if (e.key === 'Escape') kioskCancelBtn.click();
-    });
-
-    kioskCancelBtn.addEventListener('click', () => {
-      kioskModal.classList.remove('visible');
-      kioskRoomInput.value = '';
-      kioskConfirmBtn.disabled = true;
-      kioskRoomError.style.display = 'none';
-    });
-
-    async function enterKioskMode(rn) {
-      let roomInfo;
-      try {
-        roomInfo = await getRoomInfo(rn);
-      } catch (err) {
-        console.warn('check-room failed:', err.message);
-        return false;
-      }
-
-      kioskRoomName = rn;
-      kioskMode = true;
-      callerModeEl.style.display = 'none';
-      kioskModeEl.classList.add('active');
-      statusEl.classList.add('polling');
-      startClockDrift();
-
-      window._roomUrl = roomInfo.roomUrl;
-      await initRealtime(kioskRoomName);
-
-      // Reconcile count against Daily before deciding whether to auto-join.
-      // This clears any stale participants left over from dropped connections.
-      const synced = await syncRoom(kioskRoomName);
-      const participants = synced ? synced.participants : 0;
-      lastKnownCount = participants;
-
-      if (participants > 0) await kioskJoin(roomInfo.roomUrl);
-      return true;
-    }
-
-    kioskConfirmBtn.addEventListener('click', async () => {
-      const rn = kioskRoomInput.value.trim();
-      kioskConfirmBtn.disabled = true;
-
-      kioskModal.classList.remove('visible');
-      const ok = await enterKioskMode(rn);
-      if (!ok) {
-        kioskModal.classList.add('visible');
-        kioskRoomError.style.display = 'block';
-        kioskConfirmBtn.disabled = false;
-      }
-    });
-
-    // Auto-enter kiosk mode from ?room= URL parameter
-    const _autoRoom = new URLSearchParams(window.location.search).get('room');
-    if (_autoRoom) enterKioskMode(_autoRoom);
-
-    let kioskEnding = false;
-    let kioskEndedAt = 0;
-
-    async function kioskJoin(url) {
-      if (kioskCallActive || kioskEnding) return;
-      kioskCallActive = true;
-      statusEl.classList.add('active');
-      kioskIdleEl.classList.add('hidden');
-      setTimeout(() => kioskVideoEl.classList.add('active'), 600);
-
-      callObject = DailyIframe.createFrame(kioskFrameEl, {
-        showLeaveButton: false,
-        showFullscreenButton: false,
-        iframeStyle: { position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' },
-      });
-
-      callObject.on('participant-left', () => {
-        const remotes = Object.values(callObject.participants()).filter(p => !p.local);
-        if (remotes.length === 0) kioskEnd();
-      });
-
-      callObject.on('left-meeting', () => kioskEnd());
-      callObject.on('error', () => kioskEnd());
-
-      await callObject.join({ url, userName: 'Kiosk', startVideoOff: false, startAudioOff: false });
-    }
-
-    async function kioskEnd() {
-      if (!kioskCallActive || kioskEnding) return;
-      kioskEnding = true;
-      kioskCallActive = false;
-      if (callObject) {
-        const co = callObject;
-        callObject = null;
-        try { await co.leave(); } catch (e) { console.warn('Daily leave error:', e); }
-        try { await co.destroy(); } catch (e) { console.warn('Daily destroy error:', e); }
-      }
-      kioskFrameEl.innerHTML = '';
-      kioskVideoEl.classList.remove('active');
-      statusEl.classList.remove('active', 'incoming');
-      kioskEndedAt = Date.now();
-      kioskEnding = false;
-      setTimeout(() => kioskIdleEl.classList.remove('hidden'), 400);
-      // Reconcile after a short delay to let Daily process the leave event,
-      // then catch any stale entries the webhook may have missed
-      setTimeout(() => syncRoom(kioskRoomName), 6000);
-    }
-  </script>
+    <script src="/app.js"></script>
 </body>
 </html>
