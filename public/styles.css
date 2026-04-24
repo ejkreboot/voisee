@@ -109,9 +109,23 @@ a {
     align-items: center;
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
 .logo-img {
     height: 40px;
     width: auto;
+}
+
+.logo-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: -0.02em;
 }
 
 .nav-links {
@@ -240,18 +254,31 @@ a {
     z-index: -1;
 }
 
+.hero .container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    justify-content: space-between;
+}
+
 .hero-content {
     position: relative;
     z-index: 1;
-    max-width: 800px;
+    flex: 1 1 0;
     color: white;
-    text-align: center;
-    margin: 0 auto;
+    text-align: left;
     padding: var(--spacing-xl) 0;
 }
 
+.hero-caller-card {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 420px;
+    width: 420px;
+}
+
 .hero-title {
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 4vw + 0.5rem, 3.5rem);
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: var(--spacing-md);
@@ -259,7 +286,7 @@ a {
 }
 
 .hero-subtitle {
-    font-size: 1.375rem;
+    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.375rem);
     line-height: 1.6;
     margin-bottom: var(--spacing-lg);
     color: rgba(255, 255, 255, 0.95);
@@ -269,7 +296,7 @@ a {
 .hero-cta {
     display: flex;
     gap: var(--spacing-sm);
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
 }
 
@@ -608,10 +635,15 @@ a {
 }
 
 .connect-modes {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    display: flex;
+    justify-content: center;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-lg);
+}
+
+.connect-modes .mode-card {
+    max-width: 480px;
+    width: 100%;
 }
 
 .mode-card {
@@ -800,15 +832,43 @@ a {
     .mobile-menu-btn {
         display: flex;
     }
-    
-    .hero-title {
-        font-size: 2.5rem;
+
+    .nav-links.nav-open {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid var(--border-color);
+        padding: var(--spacing-sm) var(--spacing-md);
+        gap: var(--spacing-xs);
+        box-shadow: var(--shadow-md);
     }
-    
-    .hero-subtitle {
-        font-size: 1.125rem;
+
+    .hero .container {
+        flex-direction: column;
     }
-    
+
+    .hero-content {
+        text-align: center;
+        padding-bottom: 20px;
+    }
+
+    .hero-caller-card {
+        flex: unset;
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .hero-cta {
+        justify-content: center;
+    }
+
     .section-header h2 {
         font-size: 2rem;
     }
@@ -859,10 +919,6 @@ a {
     :root {
         --spacing-lg: 3rem;
         --spacing-xl: 4rem;
-    }
-    
-    .hero-title {
-        font-size: 2rem;
     }
     
     .hero-subtitle {

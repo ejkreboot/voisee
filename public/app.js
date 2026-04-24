@@ -25,7 +25,7 @@ const navLinks = document.querySelector('.nav-links');
 
 if (mobileMenuBtn && navLinks) {
     mobileMenuBtn.addEventListener('click', () => {
-        navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+        const isOpen = navLinks.classList.toggle('nav-open');
         mobileMenuBtn.classList.toggle('active');
     });
 }

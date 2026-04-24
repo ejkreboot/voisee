@@ -18,12 +18,12 @@
             <div class="nav-content">
                 <a href="#" class="logo">
                     <img src="/logo_for_light_backgrounds.png" alt="Voisee" class="logo-img">
+                    <span class="logo-name">Voisee</span>
                 </a>
                 <div class="nav-links">
                     <a href="#features">Features</a>
                     <a href="#how-it-works">How It Works</a>
                     <a href="#security">Security</a>
-                    <a href="#connect" class="btn-primary-small">Get Started</a>
                 </div>
                 <button class="mobile-menu-btn" aria-label="Toggle menu">
                     <span></span>
@@ -42,9 +42,21 @@
                 <h1 class="hero-title">Stay Connected to the Ones Who Matter Most</h1>
                 <p class="hero-subtitle">Video calling made effortless for those who can't operate devices on their own. No buttons to press, no apps to learn, just connection.</p>
                 <div class="hero-cta">
-                    <a href="#connect" class="btn-primary">Start Connecting</a>
                     <a href="#how-it-works" class="btn-secondary">Learn More</a>
                 </div>
+            </div>
+            <div class="mode-card hero-caller-card">
+                <h3>Join room</h3>
+                <p>Drop in from any device</p>
+                <div class="form-group">
+                    <label for="caller-room">Room Name</label>
+                    <input type="text" id="caller-room" placeholder="Enter room name">
+                </div>
+                <div class="form-group">
+                    <label for="caller-password">Password</label>
+                    <input type="password" id="caller-password" placeholder="Enter password">
+                </div>
+                <button class="btn-primary" onclick="joinAsCaller()">Join as Caller</button>
             </div>
         </div>
         <div class="hero-image-wrapper">
@@ -237,22 +249,7 @@
                 <p class="connect-subtitle">Choose how you want to use Voisee</p>
                 
                 <div class="connect-modes">
-                    <div class="mode-card">
-                        <h3>Caller Mode</h3>
-                        <p>Call your loved ones from any device</p>
-                        <div class="form-group">
-                            <label for="caller-room">Room Name</label>
-                            <input type="text" id="caller-room" placeholder="Enter room name">
-                        </div>
-                        <div class="form-group">
-                            <label for="caller-password">Password</label>
-                            <input type="password" id="caller-password" placeholder="Enter password">
-                        </div>
-                        <button class="btn-primary" onclick="joinAsCaller()">Join as Caller</button>
-                    </div>
-                    
                     <div class="mode-card mode-card-featured">
-                        <div class="featured-badge">Recommended for Setup</div>
                         <h3>Kiosk Mode</h3>
                         <p>Set up a device to auto-answer all calls</p>
                         <div class="form-group">
