@@ -969,3 +969,29 @@ body.kiosk-mode .mode-card-featured {
     width: 100%;
     max-width: 440px;
 }
+
+.kiosk-brand {
+    display: none;
+}
+
+body.kiosk-mode .kiosk-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.kiosk-brand-logo {
+    height: 2rem;
+    width: auto;
+}
+
+.kiosk-brand-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: -0.02em;
+}

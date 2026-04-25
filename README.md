@@ -24,19 +24,16 @@ A browser-based video calling tool designed for families to stay connected with 
 |---|---|
 | Frontend | Vanilla JS SPA, static files in `./public` |
 | API | Vercel serverless functions (Node.js), in `./api` |
-| Auth | Supabase Auth (email/password or magic link) |
 | Database | Supabase Postgres |
 | Video | Daily.co WebRTC |
 | Kiosk runtime | FullyKiosk or FreeKiosk (Android) |
 
-Two actors exist with intentionally different auth flows:
+Two connection modes exist:
 
-- **Family members** — authenticated via Supabase session tokens
-- **Kiosk devices** — registered once via a human-entered pairing code; subsequently authenticate using a stored device credential in `localStorage`
+- **Caller** — a family member navigates to the app, enters a room name and password, and joins a video call
+- **Kiosk** — a device navigates to `/?mode=kiosk`, a one-time setup form collects the room name and password, credentials are persisted in `localStorage`, and the device auto-connects on every subsequent load without any user interaction
 
 Daily.co meeting tokens are always minted server-side. The `DAILY_API_KEY` is never exposed to the client.
-
-See [architecture.md](architecture.md) for the full auth and provisioning design.
 
 ---
 
@@ -154,15 +151,13 @@ Protected endpoints (requiring Supabase user token or device credential) are des
 
 ## Kiosk Device Setup
 
-Kiosk mode targets Android tablets running [FullyKiosk](https://www.fully-kiosk.com/) or [FreeKiosk](https://www.freekiosk.app/). The kiosk browser loads the app URL and persists the device credential in `localStorage`.
+Kiosk mode targets Android tablets running [FullyKiosk](https://www.fully-kiosk.com/) or [FreeKiosk](https://www.freekiosk.app/). Configure the browser to open the app URL with `?mode=kiosk` appended.
 
-**First-time pairing:**
+**First-time setup:**
 
-1. An authenticated family member generates a pairing code from the dashboard (`POST /api/generate-pairing-code`)
-2. The code (e.g. `HAWK-4271`) is entered once into the kiosk app
-3. The kiosk exchanges the code for a device credential (`POST /api/pair-device`), which is stored in `localStorage` under `voisee_device_credential`
-4. On every subsequent load, the kiosk uses the stored credential automatically — no further setup needed
+1. Navigate to `https://your-deployment.vercel.app/?mode=kiosk`
+2. The kiosk setup form is shown — enter the room name and password
+3. On submit, credentials are verified against the API and stored in `localStorage` (`voisee_kiosk_room`, `voisee_kiosk_password`)
+4. The device immediately joins the room and will auto-connect on every subsequent load — no further interaction needed
 
-**Re-pairing:** If `localStorage` is cleared (factory reset, new device), the pairing screen is shown again. Generate a new code from the family member dashboard.
-
-See [architecture.md](architecture.md) for the full token flow.
+**Re-setup:** If `localStorage` is cleared (factory reset, new device, browser data wipe), the setup form is shown again on next load. Enter the credentials once more.
