@@ -931,3 +931,41 @@ a {
         font-size: 0.9375rem;
     }
 }
+
+/* ========================================
+   KIOSK MODE
+   Hides marketing content; shows only the
+   kiosk connect form, full-screen centered
+   ======================================== */
+
+body.kiosk-mode .navbar,
+body.kiosk-mode .hero,
+body.kiosk-mode .features,
+body.kiosk-mode .how-it-works,
+body.kiosk-mode .testimonial,
+body.kiosk-mode .security,
+body.kiosk-mode .connect-content > h2,
+body.kiosk-mode .connect-info,
+body.kiosk-mode .footer {
+    display: none;
+}
+
+body.kiosk-mode .connect {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background);
+}
+
+body.kiosk-mode .connect-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+body.kiosk-mode .mode-card-featured {
+    width: 100%;
+    max-width: 440px;
+}

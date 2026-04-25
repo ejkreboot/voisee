@@ -201,7 +201,9 @@ async function joinAsKiosk() {
     try {
         const roomUrl = await verifyAndConnect(roomName, password);
         
-        // Store connection info
+        // Persist credentials so kiosk auto-reconnects after returning from a call
+        localStorage.setItem('voisee_kiosk_room', roomName);
+        localStorage.setItem('voisee_kiosk_password', password);
         sessionStorage.setItem('voisee_room', roomName);
         sessionStorage.setItem('voisee_mode', 'kiosk');
         
@@ -310,8 +312,35 @@ function checkRecentConnection() {
     }
 }
 
+/**
+ * Initialize kiosk mode: hide marketing content, auto-connect if credentials are stored
+ */
+function initKioskMode() {
+    document.body.classList.add('kiosk-mode');
+
+    const savedRoom = localStorage.getItem('voisee_kiosk_room');
+    const savedPassword = localStorage.getItem('voisee_kiosk_password');
+
+    if (savedRoom && savedPassword) {
+        const roomInput = document.getElementById('kiosk-room');
+        const passwordInput = document.getElementById('kiosk-password');
+        if (roomInput) roomInput.value = savedRoom;
+        if (passwordInput) passwordInput.value = savedPassword;
+
+        // Simulate a button click so joinAsKiosk() runs with proper event context
+        const button = document.querySelector('.mode-card-featured button');
+        if (button) button.click();
+    }
+}
+
 // Check for recent connections on page load
 checkRecentConnection();
+
+// Activate kiosk mode when ?mode=kiosk is present in the URL
+const _urlParams = new URLSearchParams(window.location.search);
+if (_urlParams.get('mode') === 'kiosk') {
+    initKioskMode();
+}
 
 // Log initialization
 console.log('🎥 Voisee initialized - Stay connected to your loved ones');

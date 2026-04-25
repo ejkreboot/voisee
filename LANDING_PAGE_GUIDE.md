@@ -57,8 +57,6 @@ The landing page has been completely redesigned with a professional marketing ap
 4. Sees testimonial → builds trust
 5. Reaches connection form → takes action
 
-## For Your Business Owner Friend
-
 ### Key Selling Points to Emphasize:
 
 1. **Zero Tech Skills Required** - Perfect for seniors/grandparents
@@ -68,18 +66,3 @@ The landing page has been completely redesigned with a professional marketing ap
 5. **No Apps** - Works in any web browser
 6. **Perfect for Family Caregiving** - Check in on elderly relatives easily
 
-### Demo Flow:
-
-1. Show the landing page on your phone/tablet
-2. Explain the kiosk setup (leave a device at grandma's)
-3. Demo a call from your phone to the kiosk
-4. Highlight the auto-answer feature
-5. Show how easy it is (just enter room name + password)
-
-## Technical Notes
-
-- All functionality preserved from original
-- Caller mode and Kiosk mode still work identically
-- Added smooth scroll to connect section from hero button
-- Fully responsive CSS with mobile-first approach
-- No additional dependencies added
